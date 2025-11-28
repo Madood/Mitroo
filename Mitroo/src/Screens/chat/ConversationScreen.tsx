@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { useStore } from '../store/useStore';
+import { useStore } from '../../store/useStore';
+import { ContactListModal } from '../contacts/ContactListModal'; // Fixed import path
 
 // Simple TopBar component
 const TopBar = ({ 
@@ -250,6 +251,37 @@ const emptyStateStyles = StyleSheet.create({
   },
 });
 
+// Floating Action Button Component
+const FloatingActionButton = ({ onPress }: { onPress: () => void }) => {
+  return (
+    <TouchableOpacity style={floatingButtonStyles.container} onPress={onPress}>
+      <Icon name="plus" size={24} color="#ffffff" />
+    </TouchableOpacity>
+  );
+};
+
+const floatingButtonStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+});
+
 // Main ConversationsScreen Component
 export function ConversationsScreen() {
   const currentUser = useStore(state => state.currentUser);
@@ -258,6 +290,9 @@ export function ConversationsScreen() {
   const logout = useStore(state => state.logout);
   const setSelectedConversation = useStore(state => state.setSelectedConversation);
   const initiateCall = useStore(state => state.initiateCall);
+  const setConversations = useStore(state => state.setConversations);
+  
+  const [showContacts, setShowContacts] = useState(false);
   
   const selectConversation = (conversationId: string) => {
     console.log('Selected conversation:', conversationId);
@@ -280,6 +315,42 @@ export function ConversationsScreen() {
     }
     console.log('Initiating video call to:', userId);
     initiateCall(userId, 'video');
+  };
+
+  const handleContactSelect = (contact: any) => {
+    console.log('Selected contact:', contact);
+    
+    if (!currentUser) return;
+
+    // Check if conversation already exists with this contact
+    const existingConversation = conversations.find(conv => 
+      conv.participants.includes(contact.id) && conv.participants.includes(currentUser.id)
+    );
+
+    if (existingConversation) {
+      // Switch to existing conversation
+      setSelectedConversation(existingConversation.id);
+      setShowContacts(false);
+      return;
+    }
+
+    // Create new conversation with proper types - FIXED: use undefined instead of null
+    const newConversation = {
+      id: Date.now().toString(),
+      participants: [currentUser.id, contact.id],
+      name: contact.name,
+      lastMessage: undefined, // FIXED: Use undefined instead of null
+      createdAt: new Date(),
+      isGroup: false,
+    };
+    
+    setConversations([...conversations, newConversation]);
+    setSelectedConversation(newConversation.id);
+    setShowContacts(false);
+  };
+
+  const handleAddContact = () => {
+    setShowContacts(true);
   };
 
   if (!currentUser) return null;
@@ -322,26 +393,40 @@ export function ConversationsScreen() {
       />
       
       {conversations.length === 0 ? (
-        <EmptyState onFindContacts={() => setCurrentView('contacts' as any)} />
+        <View style={styles.contentContainer}>
+          <EmptyState onFindContacts={handleAddContact} />
+        </View>
       ) : (
-        <ScrollView style={styles.conversationsList}>
-          {sortedConversations.map(conversation => {
-            // Find the other user ID for calls - handle undefined case
-            const otherUserId = conversation.participants.find((p: string) => p !== currentUser.id);
-            
-            return (
-              <ConversationItem
-                key={conversation.id}
-                conversation={conversation}
-                currentUserId={currentUser.id}
-                onClick={() => selectConversation(conversation.id)}
-                onVoiceCall={() => handleVoiceCall(conversation.id, otherUserId)}
-                onVideoCall={() => handleVideoCall(conversation.id, otherUserId)}
-              />
-            );
-          })}
-        </ScrollView>
+        <View style={styles.contentContainer}>
+          <ScrollView style={styles.conversationsList}>
+            {sortedConversations.map(conversation => {
+              // Find the other user ID for calls - handle undefined case
+              const otherUserId = conversation.participants.find((p: string) => p !== currentUser.id);
+              
+              return (
+                <ConversationItem
+                  key={conversation.id}
+                  conversation={conversation}
+                  currentUserId={currentUser.id}
+                  onClick={() => selectConversation(conversation.id)}
+                  onVoiceCall={() => handleVoiceCall(conversation.id, otherUserId)}
+                  onVideoCall={() => handleVideoCall(conversation.id, otherUserId)}
+                />
+              );
+            })}
+          </ScrollView>
+        </View>
       )}
+      
+      {/* Floating Action Button */}
+      <FloatingActionButton onPress={handleAddContact} />
+      
+      {/* Contacts Modal - Now using the imported component */}
+      <ContactListModal
+        visible={showContacts}
+        onClose={() => setShowContacts(false)}
+        onContactSelect={handleContactSelect}
+      />
     </SafeAreaView>
   );
 }
@@ -350,6 +435,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  contentContainer: {
+    flex: 1,
   },
   headerActions: {
     flexDirection: 'row',

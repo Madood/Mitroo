@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerUser, loginUser, logoutUser, getStoredUser, isAuthenticated } from '../services/api/authApi';
 
 export type View = 'login' | 'signup' | 'conversations' | 'chat' | 'settings' | 'call' | 'contacts';
 
@@ -54,6 +55,7 @@ interface AppState {
   conversations: Conversation[];
   messages: Message[];
   activeCall: Call | null;
+  incomingCall: Call | null;
   
   // Actions
   login: (email: string, password: string) => Promise<boolean>;
@@ -69,19 +71,13 @@ interface AppState {
   initiateCall: (userId: string, type: 'audio' | 'video') => void;
   endCall: () => void;
   answerCall: () => void;
+  acceptCall: () => void;
+  rejectCall: () => void;
+  setIncomingCall: (call: Call | null) => void;
+  initializeAuth: () => Promise<void>;
 }
 
-// Demo data
-const demoUsers: User[] = [
-  { 
-    id: '1', 
-    email: 'user@example.com', 
-    name: 'Demo User',
-    online: true,
-    lastSeen: new Date()
-  },
-];
-
+// Demo data for initial state
 const demoConversations: Conversation[] = [
   {
     id: '1',
@@ -146,71 +142,112 @@ export const useStore = create<AppState>()(
       currentView: 'login',
       isLoading: false,
       selectedConversationId: null,
-      conversations: [],
-      messages: [],
+      conversations: demoConversations,
+      messages: demoMessages,
       activeCall: null,
+      incomingCall: null,
 
-      // Actions
+      // Initialize authentication on app start
+      initializeAuth: async () => {
+        try {
+          const authenticated = await isAuthenticated();
+          if (authenticated) {
+            const user = await getStoredUser();
+            if (user) {
+              set({
+                currentUser: user,
+                isAuthenticated: true,
+                currentView: 'conversations',
+                conversations: demoConversations,
+                messages: demoMessages,
+              });
+            }
+          }
+        } catch (error) {
+          console.log('Auth initialization error:', error);
+        }
+      },
+
+      // Login with real backend
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const user = demoUsers[0] || {
-          id: Math.random().toString(36).substr(2, 9),
-          email,
-          name: email.split('@')[0],
-          online: true,
-          lastSeen: new Date(),
-        };
-        
-        set({
-          currentUser: user,
-          isAuthenticated: true,
-          isLoading: false,
-          conversations: demoConversations,
-          messages: demoMessages,
-          currentView: 'conversations',
-        });
-        
-        return true;
+        try {
+          const result = await loginUser({ email, password });
+          
+          if (result.success) {
+            const user = result.data.user;
+            set({
+              currentUser: user,
+              isAuthenticated: true,
+              isLoading: false,
+              conversations: demoConversations,
+              messages: demoMessages,
+              currentView: 'conversations',
+            });
+            return true;
+          } else {
+            set({ isLoading: false });
+            throw new Error(result.message || 'Login failed. Please check your credentials.');
+          }
+        } catch (error) {
+          set({ isLoading: false });
+          // Re-throw the error with the actual message from backend
+          if (error instanceof Error) {
+            throw error;
+          } else {
+            throw new Error('Login failed. Please try again.');
+          }
+        }
       },
 
+      // Signup with real backend
       signup: async (email: string, password: string, name?: string) => {
         set({ isLoading: true });
         
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const user = {
-          id: Math.random().toString(36).substr(2, 9),
-          email,
-          name: name || email.split('@')[0],
-          online: true,
-          lastSeen: new Date(),
-        };
-        
-        set({
-          currentUser: user,
-          isAuthenticated: true,
-          isLoading: false,
-          conversations: demoConversations,
-          messages: demoMessages,
-          currentView: 'conversations',
-        });
-        
-        return true;
+        try {
+          const result = await registerUser({ 
+            email, 
+            password, 
+            name: name || email.split('@')[0] 
+          });
+          
+          if (result.success) {
+            const user = result.data.user;
+            set({
+              currentUser: user,
+              isAuthenticated: true,
+              isLoading: false,
+              conversations: demoConversations,
+              messages: demoMessages,
+              currentView: 'conversations',
+            });
+            return true;
+          } else {
+            set({ isLoading: false });
+            throw new Error(result.message || 'Registration failed. Please try again.');
+          }
+        } catch (error) {
+          set({ isLoading: false });
+          // Re-throw the error with the actual message from backend
+          if (error instanceof Error) {
+            throw error;
+          } else {
+            throw new Error('Registration failed. Please try again.');
+          }
+        }
       },
 
-      logout: () => {
+      logout: async () => {
+        await logoutUser();
         set({
           currentUser: null,
           isAuthenticated: false,
           currentView: 'login',
-          conversations: [],
-          messages: [],
+          conversations: demoConversations,
+          messages: demoMessages,
           activeCall: null,
+          incomingCall: null,
           selectedConversationId: null,
         });
       },
@@ -271,16 +308,13 @@ export const useStore = create<AppState>()(
           callerId: currentUser.id,
           receiverId: userId,
           type,
-          status: 'active', // Set to active for immediate testing
+          status: 'active',
         };
         
         set({ activeCall: call, currentView: 'call' });
-        
-        console.log('Call initiated:', call);
       },
 
       endCall: () => {
-        console.log('Ending call...');
         set({ 
           activeCall: null, 
           currentView: 'conversations' 
@@ -291,6 +325,28 @@ export const useStore = create<AppState>()(
         set(state => ({
           activeCall: state.activeCall ? { ...state.activeCall, status: 'active' } : null
         }));
+      },
+
+      acceptCall: () => {
+        const { incomingCall } = get();
+        if (incomingCall) {
+          set({ 
+            activeCall: { ...incomingCall, status: 'active' },
+            incomingCall: null,
+            currentView: 'call'
+          });
+        }
+      },
+
+      rejectCall: () => {
+        set({ 
+          incomingCall: null,
+          currentView: 'conversations'
+        });
+      },
+
+      setIncomingCall: (call: Call | null) => {
+        set({ incomingCall: call });
       },
     }),
     {
@@ -318,6 +374,7 @@ export const useMessages = (conversationId?: string) =>
       : state.messages
   );
 export const useActiveCall = () => useStore(state => state.activeCall);
+export const useIncomingCall = () => useStore(state => state.incomingCall);
 export const useSelectedConversationId = () => useStore(state => state.selectedConversationId);
 
 // Action hooks
@@ -325,6 +382,7 @@ export const useAuthActions = () => useStore(state => ({
   login: state.login,
   signup: state.signup,
   logout: state.logout,
+  initializeAuth: state.initializeAuth,
 }));
 
 export const useUIActions = () => useStore(state => ({
@@ -343,4 +401,7 @@ export const useCallActions = () => useStore(state => ({
   initiateCall: state.initiateCall,
   endCall: state.endCall,
   answerCall: state.answerCall,
+  acceptCall: state.acceptCall,
+  rejectCall: state.rejectCall,
+  setIncomingCall: state.setIncomingCall,
 }));

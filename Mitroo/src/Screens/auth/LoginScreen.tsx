@@ -11,28 +11,24 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useStore } from '../../store/useStore';
 
-interface LoginScreenProps {
-  onSwitchToSignup?: () => void;
-}
-
-export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
+const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const login = useStore(state => state.login);
   const setCurrentView = useStore(state => state.setCurrentView);
-  
+
   const handleSubmit = async () => {
     if (!email || !password) {
       setError('Please fill in all fields');
       return;
     }
-    
+
     setError('');
     setIsLoading(true);
-    
+
     try {
       const success = await login(email, password);
       if (success) {
@@ -41,12 +37,17 @@ export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
         setError('Invalid email or password');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      // Type-safe error handling
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <ScrollView 
       contentContainerStyle={styles.container}
@@ -58,18 +59,19 @@ export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
             <Icon name="mail" size={32} color="#ffffff" />
           </View>
           <Text style={styles.title}>Welcome to Mitroo</Text>
-          <Text style={styles.subtitle}>Sign in to start messaging</Text>
+          <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>
-        
+
         <View style={styles.form}>
           {error ? (
             <View style={styles.errorContainer}>
+              <Icon name="alert-circle" size={16} color="#dc2626" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
-          
+
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Email Address</Text>
             <View style={styles.inputWrapper}>
               <Icon name="mail" size={20} color="#9ca3af" style={styles.icon} />
               <TextInput
@@ -81,10 +83,11 @@ export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!isLoading}
               />
             </View>
           </View>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.inputWrapper}>
@@ -93,15 +96,16 @@ export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 placeholderTextColor="#9ca3af"
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!isLoading}
               />
             </View>
           </View>
-          
+
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
             onPress={handleSubmit}
@@ -117,20 +121,23 @@ export function LoginScreen({ onSwitchToSignup }: LoginScreenProps) {
             )}
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.footer}>
-          <TouchableOpacity onPress={onSwitchToSignup}>
-            <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+          <TouchableOpacity 
+            onPress={() => setCurrentView('signup')}
+            disabled={isLoading}
+          >
+            <Text style={[styles.linkText, isLoading && styles.linkDisabled]}>
+              Don't have an account? <Text style={styles.linkBold}>Sign up</Text>
+            </Text>
           </TouchableOpacity>
-        </View>
-        
-        <View style={styles.demoContainer}>
-          <Text style={styles.demoText}>Demo: Use any email with any password</Text>
         </View>
       </View>
     </ScrollView>
   );
-}
+};
+
+export default LoginScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -144,10 +151,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
@@ -177,6 +181,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#6b7280',
+    textAlign: 'center',
   },
   form: {
     gap: 16,
@@ -187,10 +192,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#fecaca',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   errorText: {
     color: '#dc2626',
     fontSize: 14,
+    flex: 1,
   },
   inputContainer: {
     gap: 8,
@@ -208,8 +217,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#ffffff',
   },
-  icon: {
+  icon: { 
     marginLeft: 12,
+    width: 20,
   },
   input: {
     flex: 1,
@@ -224,14 +234,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  buttonDisabled: { 
+    opacity: 0.5 
   },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  buttonContent: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8 
   },
   buttonText: {
     color: '#ffffff',
@@ -243,15 +254,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#3b82f6',
+    color: '#6b7280',
     fontSize: 16,
   },
-  demoContainer: {
-    marginTop: 16,
-    alignItems: 'center',
+  linkDisabled: {
+    opacity: 0.5,
   },
-  demoText: {
-    color: '#6b7280',
-    fontSize: 14,
+  linkBold: {
+    color: '#3b82f6',
+    fontWeight: '600',
   },
 });

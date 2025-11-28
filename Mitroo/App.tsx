@@ -1,4 +1,3 @@
-
 /**
  * Mitroo Chat App
  * React Native Chat Application
@@ -7,22 +6,22 @@
 import React from 'react';
 import { SafeAreaView, StatusBar, StyleSheet, useColorScheme } from 'react-native';
 import { Colors } from 'react-native/Libraries/NewAppScreen';
-import { LoginScreen } from './src/Screens/auth/LoginScreen';
-import { SignupScreen } from './src/Screens/auth/SignupScreen';
-import { ConversationsScreen } from './src/Screens/ConversationScreen';
-import { ChatScreen } from './src/Screens/ChatScreen';
-import { SettingsScreen } from './src/Screens/SettingScreen';
-import { CallScreen } from './src/Screens/CallScreen';
+import LoginScreen from './src/Screens/auth/LoginScreen';
+import SignupScreen from './src/Screens/auth/SignupScreen';
+import { ConversationsScreen } from './src/Screens/chat/ConversationScreen';
+import { ChatScreen } from './src/Screens/chat/ChatScreen';
+import { SettingsScreen } from './src/Screens/settings/SettingScreen';
+import { CallScreen } from './src/Screens/call/CallScreen';
+import { ContactsScreen } from './src/Screens/contacts/contactsScreen'; // Add this import
 import { useStore } from './src/store/useStore';
 
-// Temporary type extension since your View type might be missing some values
-type ExtendedView = 'login' | 'signup' | 'conversations' | 'chat' | 'settings' | 'call' | 'contacts';
+// Define the complete view type
+type AppView = 'login' | 'signup' | 'conversations' | 'chat' | 'settings' | 'call' | 'contacts';
 
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const currentView = useStore(state => state.currentView);
   const isAuthenticated = useStore(state => state.isAuthenticated);
-  const setCurrentView = useStore(state => state.setCurrentView);
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
@@ -32,14 +31,14 @@ function App(): JSX.Element {
     if (!isAuthenticated) {
       switch (currentView) {
         case 'signup':
-          return <SignupScreen onSwitchToLogin={() => setCurrentView('login')} />;
+          return <SignupScreen />;
         case 'login':
         default:
-          return <LoginScreen onSwitchToSignup={() => setCurrentView('signup')} />;
+          return <LoginScreen />;
       }
     } else {
-      // Use type assertion as a temporary fix
-      const view = currentView as ExtendedView;
+      // Use type assertion to ensure we handle all view types
+      const view = currentView as AppView;
       
       switch (view) {
         case 'conversations':
@@ -50,6 +49,8 @@ function App(): JSX.Element {
           return <SettingsScreen />;
         case 'call':
           return <CallScreen />;
+        case 'contacts': // Add contacts case
+          return <ContactsScreen />;
         default:
           return <ConversationsScreen />;
       }

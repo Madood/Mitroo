@@ -11,7 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { useStore } from '../store/useStore';
+import { useStore } from '../../store/useStore';
 
 // Components
 const Avatar = ({ user, size = 'md', showOnline = false }: { user: any; size?: 'sm' | 'md' | 'lg'; showOnline?: boolean }) => {

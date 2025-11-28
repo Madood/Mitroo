@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { useStore } from '../store/useStore';
+import { useStore } from '../../store/useStore';
 
 const { width, height } = Dimensions.get('window');
 

@@ -7,101 +7,58 @@ import {
   ActivityIndicator,
   StyleSheet,
   ScrollView,
-  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useStore } from '../../store/useStore';
 
-type SignupStep = 'register' | 'verify';
-
-interface SignupScreenProps {
-  onSwitchToLogin?: () => void;
-}
-
-export function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
-  const [step, setStep] = useState<SignupStep>('register');
+const SignupScreen = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const signup = useStore(state => state.signup);
   const setCurrentView = useStore(state => state.setCurrentView);
-  
+
   const handleRegister = async () => {
     setError('');
-    
-    // Validation
+
     if (name.trim().length < 2) {
       setError('Name must be at least 2 characters long');
       return;
     }
-    
+
     if (password.length < 6) {
       setError('Password must be at least 6 characters long');
       return;
     }
-    
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const success = await signup(email, password, name);
       if (success) {
-        setStep('verify');
+        setCurrentView('conversations');
       } else {
         setError('Registration failed. Please try again.');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      // Type-safe error handling
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
-  };
-  
-  const handleVerification = async () => {
-    setError('');
-    
-    if (verificationCode.length !== 6) {
-      setError('Please enter a valid 6-digit code');
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      // For demo purposes, any 6-digit code works
-      // In a real app, you'd verify against the backend
-      setCurrentView('conversations');
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleBackToLogin = () => {
-    if (onSwitchToLogin) {
-      onSwitchToLogin();
-    }
-  };
-
-  const handleResendCode = () => {
-    setError('');
-    Alert.alert('Success', 'Verification code resent!');
-  };
-
-  const handleVerificationCodeChange = (text: string) => {
-    // Only allow numbers and limit to 6 digits
-    const numbersOnly = text.replace(/[^0-9]/g, '');
-    setVerificationCode(numbersOnly.slice(0, 6));
   };
 
   return (
@@ -110,185 +67,126 @@ export function SignupScreen({ onSwitchToLogin }: SignupScreenProps) {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.card}>
-        {step === 'register' ? (
-          <>
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Icon name="user" size={32} color="#ffffff" />
-              </View>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Join Mitroo to start messaging</Text>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Icon name="user-plus" size={32} color="#ffffff" />
+          </View>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Join Mitroo to start messaging</Text>
+        </View>
+
+        <View style={styles.form}>
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Icon name="alert-circle" size={16} color="#dc2626" />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
-            
-            <View style={styles.form}>
-              {error ? (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              ) : null}
-              
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name</Text>
-                <View style={styles.inputWrapper}>
-                  <Icon name="user" size={20} color="#9ca3af" style={styles.icon} />
-                  <TextInput
-                    style={styles.input}
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="John Doe"
-                    placeholderTextColor="#9ca3af"
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
-                <View style={styles.inputWrapper}>
-                  <Icon name="mail" size={20} color="#9ca3af" style={styles.icon} />
-                  <TextInput
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="you@example.com"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
-                <View style={styles.inputWrapper}>
-                  <Icon name="lock" size={20} color="#9ca3af" style={styles.icon} />
-                  <TextInput
-                    style={styles.input}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="••••••••"
-                    placeholderTextColor="#9ca3af"
-                    secureTextEntry
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm Password</Text>
-                <View style={styles.inputWrapper}>
-                  <Icon name="lock" size={20} color="#9ca3af" style={styles.icon} />
-                  <TextInput
-                    style={styles.input}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    placeholder="••••••••"
-                    placeholderTextColor="#9ca3af"
-                    secureTextEntry
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
-              
-              <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
-                onPress={handleRegister}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <View style={styles.buttonContent}>
-                    <ActivityIndicator size="small" color="#ffffff" />
-                    <Text style={styles.buttonText}>Creating Account...</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.buttonText}>Create Account</Text>
-                )}
-              </TouchableOpacity>
+          ) : null}
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Full Name</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="user" size={20} color="#9ca3af" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="John Doe"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isLoading}
+              />
             </View>
-            
-            <View style={styles.footer}>
-              <TouchableOpacity onPress={handleBackToLogin}>
-                <Text style={styles.linkText}>Already have an account? Sign in</Text>
-              </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email Address</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="mail" size={20} color="#9ca3af" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor="#9ca3af"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isLoading}
+              />
             </View>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity
-              onPress={() => setStep('register')}
-              style={styles.backButton}
-            >
-              <Icon name="arrow-left" size={16} color="#6b7280" />
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Icon name="mail" size={32} color="#ffffff" />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="lock" size={20} color="#9ca3af" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Create a password"
+                placeholderTextColor="#9ca3af"
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isLoading}
+              />
+            </View>
+            <Text style={styles.helperText}>Must be at least 6 characters</Text>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="lock" size={20} color="#9ca3af" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm your password"
+                placeholderTextColor="#9ca3af"
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isLoading}
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+            onPress={handleRegister}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <View style={styles.buttonContent}>
+                <ActivityIndicator size="small" color="#ffffff" />
+                <Text style={styles.buttonText}>Creating Account...</Text>
               </View>
-              <Text style={styles.title}>Verify Your Email</Text>
-              <Text style={styles.subtitle}>
-                We've sent a verification code to{'\n'}
-                <Text style={styles.emailText}>{email}</Text>
-              </Text>
-            </View>
-            
-            <View style={styles.form}>
-              {error ? (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              ) : null}
-              
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Verification Code</Text>
-                <TextInput
-                  style={styles.verificationInput}
-                  value={verificationCode}
-                  onChangeText={handleVerificationCodeChange}
-                  placeholder="123456"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  textAlign="center"
-                />
-              </View>
-              
-              <TouchableOpacity
-                style={[styles.button, (isLoading || verificationCode.length !== 6) && styles.buttonDisabled]}
-                onPress={handleVerification}
-                disabled={isLoading || verificationCode.length !== 6}
-              >
-                {isLoading ? (
-                  <View style={styles.buttonContent}>
-                    <ActivityIndicator size="small" color="#ffffff" />
-                    <Text style={styles.buttonText}>Verifying...</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.buttonText}>Verify Email</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.footer}>
-              <TouchableOpacity onPress={handleResendCode}>
-                <Text style={styles.linkText}>Didn't receive the code? Resend</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.demoContainer}>
-              <Text style={styles.demoText}>Demo: Use any 6-digit code (e.g., 123456)</Text>
-            </View>
-          </>
-        )}
+            ) : (
+              <Text style={styles.buttonText}>Create Account</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <TouchableOpacity 
+            onPress={() => setCurrentView('login')}
+            disabled={isLoading}
+          >
+            <Text style={[styles.linkText, isLoading && styles.linkDisabled]}>
+              Already have an account? <Text style={styles.linkBold}>Log in</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
-}
+};
+
+export default SignupScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -302,10 +200,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
@@ -339,10 +234,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  emailText: {
-    fontWeight: '600',
-    color: '#374151',
-  },
   form: {
     gap: 16,
   },
@@ -352,11 +243,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#fecaca',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   errorText: {
     color: '#dc2626',
     fontSize: 14,
-    textAlign: 'center',
+    flex: 1,
   },
   inputContainer: {
     gap: 8,
@@ -374,8 +268,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#ffffff',
   },
-  icon: {
+  icon: { 
     marginLeft: 12,
+    width: 20,
   },
   input: {
     flex: 1,
@@ -384,17 +279,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
   },
-  verificationInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    fontSize: 18,
-    color: '#1f2937',
-    fontWeight: '600',
-    letterSpacing: 8,
+  helperText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
   },
   button: {
     backgroundColor: '#8b5cf6',
@@ -402,14 +290,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  buttonDisabled: { 
+    opacity: 0.5 
   },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  buttonContent: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8 
   },
   buttonText: {
     color: '#ffffff',
@@ -421,27 +310,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
+    color: '#6b7280',
+    fontSize: 16,
+  },
+  linkDisabled: {
+    opacity: 0.5,
+  },
+  linkBold: {
     color: '#8b5cf6',
-    fontSize: 16,
-  },
-  demoContainer: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  demoText: {
-    color: '#6b7280',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-    alignSelf: 'flex-start',
-  },
-  backButtonText: {
-    color: '#6b7280',
-    fontSize: 16,
+    fontWeight: '600',
   },
 });

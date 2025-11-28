@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { useStore } from '../store/useStore';
+import { useStore } from '../../store/useStore';
 
 // Simple TopBar component
 const TopBar = ({ 
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileHeader: {
-    backgroundColor: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+    backgroundColor: '#3b82f6', // Fixed: Using solid color instead of gradient
     padding: 32,
   },
   profileContent: {
