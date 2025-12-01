@@ -7,10 +7,10 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useStore } from '../../store/useStore';
-import { ContactListModal } from '../contacts/ContactListModal'; // Fixed import path
 
 // Simple TopBar component
 const TopBar = ({ 
@@ -290,9 +290,6 @@ export function ConversationsScreen() {
   const logout = useStore(state => state.logout);
   const setSelectedConversation = useStore(state => state.setSelectedConversation);
   const initiateCall = useStore(state => state.initiateCall);
-  const setConversations = useStore(state => state.setConversations);
-  
-  const [showContacts, setShowContacts] = useState(false);
   
   const selectConversation = (conversationId: string) => {
     console.log('Selected conversation:', conversationId);
@@ -317,40 +314,9 @@ export function ConversationsScreen() {
     initiateCall(userId, 'video');
   };
 
-  const handleContactSelect = (contact: any) => {
-    console.log('Selected contact:', contact);
-    
-    if (!currentUser) return;
-
-    // Check if conversation already exists with this contact
-    const existingConversation = conversations.find(conv => 
-      conv.participants.includes(contact.id) && conv.participants.includes(currentUser.id)
-    );
-
-    if (existingConversation) {
-      // Switch to existing conversation
-      setSelectedConversation(existingConversation.id);
-      setShowContacts(false);
-      return;
-    }
-
-    // Create new conversation with proper types - FIXED: use undefined instead of null
-    const newConversation = {
-      id: Date.now().toString(),
-      participants: [currentUser.id, contact.id],
-      name: contact.name,
-      lastMessage: undefined, // FIXED: Use undefined instead of null
-      createdAt: new Date(),
-      isGroup: false,
-    };
-    
-    setConversations([...conversations, newConversation]);
-    setSelectedConversation(newConversation.id);
-    setShowContacts(false);
-  };
-
   const handleAddContact = () => {
-    setShowContacts(true);
+    // Navigate to Contact Screen
+    setCurrentView('contacts');
   };
 
   if (!currentUser) return null;
@@ -372,13 +338,13 @@ export function ConversationsScreen() {
           <View style={styles.headerActions}>
             <TouchableOpacity 
               style={styles.headerButton}
-              onPress={() => setCurrentView('contacts' as any)}
+              onPress={() => setCurrentView('contacts')}
             >
               <Icon name="user-plus" size={20} color="#374151" />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.headerButton}
-              onPress={() => setCurrentView('settings' as any)}
+              onPress={() => setCurrentView('settings')}
             >
               <Icon name="settings" size={20} color="#374151" />
             </TouchableOpacity>
@@ -418,15 +384,8 @@ export function ConversationsScreen() {
         </View>
       )}
       
-      {/* Floating Action Button */}
+      {/* Floating Action Button - Now navigates to Contact Screen */}
       <FloatingActionButton onPress={handleAddContact} />
-      
-      {/* Contacts Modal - Now using the imported component */}
-      <ContactListModal
-        visible={showContacts}
-        onClose={() => setShowContacts(false)}
-        onContactSelect={handleContactSelect}
-      />
     </SafeAreaView>
   );
 }
